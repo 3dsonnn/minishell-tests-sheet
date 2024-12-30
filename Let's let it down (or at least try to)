@@ -1,0 +1,184 @@
+Faz todos os testes usando o valgrind e vai saindo do programa pra ver se tem leak. De preferência n testar muita coisa ao mesmo tempo, porque senão depois fica difícil saber qual dos comandos causou o leak.
+
+.Compile
+    Testes gerais no Makefile: compilador usado, checkar as flags, verificar relink e os targets mandatórios e afins.
+
+.Simple Command & global variables
+    Executar comandos com caminho absoluto, mas sem opção or argumento. Exemplo: /bin/ls, /bin/clear, etc.
+    Checkar as variáveis globais, se tiverem usado, e garantir q n guardam outras informações para além do número do sinal recebido.
+    Testa um comando vazio: "" ou '' e compara com a saída do bash.
+    Testa linha com apenas espaços ou tabs e checka se estão a ser guardados no histórico.
+    Sair pra verificar leak.
+
+.Arguments
+    Executar comandos com caminho absoluto, agora com opções e argumentos, mas sem aspas. Exemplo: /bin/ls -l, etc.
+    Sair pra verificar leak.
+
+.echo
+    Aqui é só ir comparando tudo com o bash:
+        echo
+        'echo'
+        "echo"
+        "'echo'"
+        '"echo"'
+        'echo '
+        " echo"
+        echo edson finda
+        echo 'edson              "           ' finda
+        echo "                 edson   '                      " finda
+        echo '       edson             ' finda "
+        echo "       edson             " finda '
+        echo edson'finda'
+        echo edson'finda'"efinda"luanda
+        echo edson"finda""efinda"42''
+        echo edson'finda'"efinda"'                   '42
+        echo -n
+        echo -
+        echo -nnnnnnnn -n -n -nnnn edsonn
+        echo -nnnnnnnn -n -n - -nnnn edsonn
+        echo -nnnnnnnn -n "-n" -nnnn edsonn
+        echo -nnnnnnnn -n "-n " -nnnn edsonn
+        echo -nnnnnnnn -n -nm -nnnn edsonn
+    Sair pra verificar leak.
+
+.exit
+    Aqui é só ir comparando tudo com o bash e sempre checkar o estado com que o programa terminou, usando echo $?:
+        exit
+        exit ""
+        exit -9223372036854775809
+        exit -9223372036854775808
+        exit -1
+        exit 0
+        exit 1
+        exit 9223372036854775807
+        exit 9223372036854775808
+        exit a
+        exit a a
+        exit 1 1
+        exit 1 a
+        exit a 1
+        exit 123a 
+        exit 123a a
+        exit '                        +1'
+        exit '                        -1'
+        exit '                        +1 '
+        exit '                        -1 '
+        exit '                        +-1'
+    Sair pra verificar leak.
+
+.Return value of a process
+    Essa parte é só pra saber se o exit status dos comando está correcto, então é bwé chato tentar testar ele só, por isso é melhor irem testando enquanto estão a testar os comandos, faz ais sentido.
+    É só depois do comando, dar um echo $? e compara com a saída do bash tbm.
+    Sair pra verificar leak.
+
+.Signals
+    Essa parte os testes já estão mesmo lá, é só fazer e comparar com o bash tbm.
+    Faz ctrl-C, depois ctrl-D e depois checka o exit status, usando echo $? tem q ser 130 e não 0
+    Sair pra verificar leak.
+
+.Double Quotes
+    Compara tbm com o bash, se o pipe ou redir estiver dentro de aspas, ele tem q ser considerado argumento do comando e perde o seu 'poder'
+    echo "cat lol.c | cat > lol.c"
+    echo something '>' aaa
+    echo something '|' cat
+    cat ""
+    Sair pra verificar leak.
+
+.Single Quotes
+    Aqui a cena dos pipes e redis tbm se aplica e tbm, podes testar, se quiseres
+    echo '$USER'
+    echo '$'
+    echo '$ '
+    echo ' $'
+    cat ''
+    Sair pra verificar leak.
+
+.env
+    env
+    env 42
+    Sair pra verificar leak.
+
+.export
+    Aqui tbm é importante ires comparando mesmo com o bash
+    export
+    export ''
+    export a (e de seguida echo $a)
+    export a b c
+    export a=
+    export a=====
+    export a=edso
+    export a='edson finda' (e de seguida echo $a)
+    export a='edson "          " finda' (e de seguida echo $a)
+    export a -oi 9mm _obs 
+    Sair pra verificar leak.
+
+.unset
+    unset
+    unset a b c (a b c sendo variáveis existentes)
+    unset a b c (a b c sendo variáveis inexistentes)
+    unset a b c (a b c apenas b existe)
+    unset a b c (a b c apenas b n existente)
+    unset PWD OLDPWD (e de seguida cd e depois env pra ver se foram recreadas)
+    Sair pra verificar leak.
+
+.cd
+    cd
+    cd pasta_existente pasta_existente
+    cd ..
+    cd .
+    cd pasta_existente (e depois env pra checkar se as variavéis de ambiente PWD e OLDPWD foram actualizadas)
+    cd pasta_existente_sem_permissão
+    cd pasta_inexistente
+    Sair pra verificar leak.
+
+.pwd
+    pwd
+    pwd sss
+
+.Relative Path
+    Essa parte é só testar mesmo comandos como ls, touch, wc e tals
+
+.Environment Path
+    Essa parte já tem la a explicação do q fazer
+
+.Redirection
+    Aqui é só mesmo testar os redirs e ir comparando com o bash
+    Testa redir sem file:
+        echo edson >
+        < file_existente
+        <<
+    Testa redirs em linhas de comando desorganizadas:
+        echo edson > file baptista finda
+        echo edson > a baptista > b finda > c
+    Testa redirs pra files sem permissão, pastas e tals
+    E aqui o << tem q ser muito bem testado:
+        Testa se as variáveis estão a ser expandidas dentro dele, n importando se estão dentro de ' ou ".
+        Testa ctrl-C e ctrl-D dentro dele tbm.
+        Testa com delimitador do tipo 'a ' ou 'a b' e sem delimitador tbm
+    Sair pra verificar leak.
+    
+.Pipes
+    Aqui é mesmo só testes de syntax, tipo pipe seguido de redir e o crlh
+    Pipe na primeira posição da linha 
+    Pipe na última posição tem que abrir o herepipe 
+    Sair pra verificar leak.
+
+.Go Crazy and history
+    Aqui eu só testo mesmo esse q vem lá, 'cat | cat | ls'
+
+.Environment variables
+    Comparar tudo com o bash
+    echo "$USER"
+    echo "$USER$USER"
+    echo "$USER "
+    echo $"USER"
+    echo "$"USER
+    echo $'USER'
+    echo '$USER'
+    echo '$'USER
+    echo $@
+    echo $@@
+    echo $@@@@
+    echo $
+    echo $fdasfwed32r43wr2rferfrefewe
+    Sair pra verificar leak.
